@@ -38,86 +38,6 @@ def get_discriminator(instruction_name: str) -> bytes:
     return hash[:8]
 
 
-# def make_swap_instruction(
-#     amount_in: int,
-#     token_account_in: Pubkey,
-#     token_account_out: Pubkey,
-#     accounts: dict,
-#     mint: Pubkey,
-#     ctx,
-#     owner,
-# ) -> Instruction:
-#     """
-#     Creates a swap instruction for the Raydium Liquidity Pool V4.
-
-#     Args:
-#         amount_in (int): The amount of tokens to swap.
-#         token_account_in (Pubkey): The user's source token account.
-#         token_account_out (Pubkey): The user's destination token account.
-#         accounts (dict): A dictionary containing necessary account public keys.
-#         mint (Pubkey): The mint address of the token being swapped.
-#         ctx: The Solana client context.
-#         owner: The owner's keypair.
-
-#     Returns:
-#         Instruction: The constructed swap instruction.
-#     """
-
-#     # Define the accounts first
-#     keys = [
-#         AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
-#         AccountMeta(pubkey=accounts["amm_id"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=accounts["authority"], is_signer=False, is_writable=False),
-#         AccountMeta(pubkey=accounts["open_orders"], is_signer=False, is_writable=True),
-#         AccountMeta(
-#             pubkey=accounts["target_orders"], is_signer=False, is_writable=True
-#         ),
-#         AccountMeta(pubkey=accounts["base_vault"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=accounts["quote_vault"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=SERUM_PROGRAM_ID, is_signer=False, is_writable=False),
-#         AccountMeta(pubkey=accounts["market_id"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=accounts["bids"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=accounts["asks"], is_signer=False, is_writable=True),
-#         AccountMeta(pubkey=accounts["event_queue"], is_signer=False, is_writable=True),
-#         AccountMeta(
-#             pubkey=accounts["market_base_vault"], is_signer=False, is_writable=True
-#         ),
-#         AccountMeta(
-#             pubkey=accounts["market_quote_vault"], is_signer=False, is_writable=True
-#         ),
-#         AccountMeta(
-#             pubkey=accounts["market_authority"], is_signer=False, is_writable=False
-#         ),
-#         AccountMeta(
-#             pubkey=token_account_in, is_signer=False, is_writable=True
-#         ),  # UserSourceTokenAccount
-#         AccountMeta(
-#             pubkey=token_account_out, is_signer=False, is_writable=True
-#         ),  # UserDestTokenAccount
-#         AccountMeta(
-#             pubkey=owner.pubkey(), is_signer=True, is_writable=False
-#         ),  # UserOwner
-#     ]
-
-#     # Build the instruction data with the correct discriminator
-#     discriminator = get_discriminator("swapBaseIn")
-
-#     data = SWAP_LAYOUT.build(
-#         {
-#             "instruction": discriminator,
-#             "amount_in": amount_in,
-#             "min_amount_out": 1,  # Set to a small non-zero value
-#         }
-#     )
-
-#     # Log the instruction data and involved accounts for debugging
-#     print("Swap Instruction Data:", data.hex())
-#     print("Accounts Involved in Swap Instruction:", [str(meta.pubkey) for meta in keys])
-
-#     # Create and return the Instruction object
-#     return Instruction(AMM_PROGRAM_ID, data, keys)
-
-
 def make_swap_instruction(
     amount_in: int,
     token_account_in: Pubkey,
@@ -129,8 +49,21 @@ def make_swap_instruction(
 ) -> Instruction:
     """
     Creates a swap instruction for the Raydium Liquidity Pool V4.
+
+    Args:
+        amount_in (int): The amount of tokens to swap.
+        token_account_in (Pubkey): The user's source token account.
+        token_account_out (Pubkey): The user's destination token account.
+        accounts (dict): A dictionary containing necessary account public keys.
+        mint (Pubkey): The mint address of the token being swapped.
+        ctx: The Solana client context.
+        owner: The owner's keypair.
+
+    Returns:
+        Instruction: The constructed swap instruction.
     """
-    # Define the accounts
+
+    # Define the accounts first
     keys = [
         AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["amm_id"], is_signer=False, is_writable=True),
@@ -155,22 +88,33 @@ def make_swap_instruction(
         AccountMeta(
             pubkey=accounts["market_authority"], is_signer=False, is_writable=False
         ),
-        AccountMeta(pubkey=token_account_in, is_signer=False, is_writable=True),
-        AccountMeta(pubkey=token_account_out, is_signer=False, is_writable=True),
-        AccountMeta(pubkey=owner.pubkey(), is_signer=True, is_writable=False),
+        AccountMeta(
+            pubkey=token_account_in, is_signer=False, is_writable=True
+        ),  # UserSourceTokenAccount
+        AccountMeta(
+            pubkey=token_account_out, is_signer=False, is_writable=True
+        ),  # UserDestTokenAccount
+        AccountMeta(
+            pubkey=owner.pubkey(), is_signer=True, is_writable=False
+        ),  # UserOwner
     ]
 
-    # Build the instruction data with correct format for Raydium V4
-    # Instruction layout:
-    # - u8: instruction type (9 for swapBaseIn)
-    # - u64: amount_in
-    # - u64: minimum_amount_out
-    data = bytes([9]) + amount_in.to_bytes(8, "little") + (1).to_bytes(8, "little")
+    # Build the instruction data with the correct discriminator
+    discriminator = get_discriminator("swapBaseIn")
 
-    # Log for debugging
-    print(f"Swap Instruction Data: {data.hex()}")
+    data = SWAP_LAYOUT.build(
+        {
+            "instruction": discriminator,
+            "amount_in": amount_in,
+            "min_amount_out": 1,  # Set to a small non-zero value
+        }
+    )
+
+    # Log the instruction data and involved accounts for debugging
+    print("Swap Instruction Data:", data.hex())
     print("Accounts Involved in Swap Instruction:", [str(meta.pubkey) for meta in keys])
 
+    # Create and return the Instruction object
     return Instruction(AMM_PROGRAM_ID, data, keys)
 
 
